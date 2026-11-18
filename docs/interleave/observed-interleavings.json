@@ -1,0 +1,2248 @@
+[
+  {
+    "scenario": "A 目录快照与查询计划边界",
+    "seed_sequence": 2,
+    "stats_before_active": [
+      {
+        "id": "08fcd1a85add05758a270adfdfd16526",
+        "snapshot": 2,
+        "read_only": false,
+        "started": "2026-11-18T09:18:34.222470923Z"
+      },
+      {
+        "id": "c1d2085b87b889c7f3c094c549ac02ef",
+        "snapshot": 2,
+        "read_only": true,
+        "started": "2026-11-18T09:18:34.222688338Z"
+      }
+    ],
+    "stats_after_active": [
+      {
+        "id": "08fcd1a85add05758a270adfdfd16526",
+        "snapshot": 2,
+        "read_only": false,
+        "started": "2026-11-18T09:18:34.222470923Z"
+      },
+      {
+        "id": "c1d2085b87b889c7f3c094c549ac02ef",
+        "snapshot": 2,
+        "read_only": true,
+        "started": "2026-11-18T09:18:34.222688338Z"
+      }
+    ],
+    "catalog_indexes": [
+      {
+        "name": "by_amplitude",
+        "relation": "spectra",
+        "column": "amplitude",
+        "unique": false,
+        "created": 3
+      }
+    ],
+    "old_tx_plan": {
+      "access": "scan",
+      "candidates": 3,
+      "snapshot": 2,
+      "residuals": 1
+    },
+    "ro_tx_plan": {
+      "access": "scan",
+      "candidates": 3,
+      "snapshot": 2,
+      "residuals": 1
+    },
+    "current_plan": {
+      "access": "index",
+      "index": "by_amplitude",
+      "candidates": 1,
+      "snapshot": 3,
+      "residuals": 1
+    },
+    "at_plan": {
+      "access": "scan",
+      "candidates": 3,
+      "snapshot": 2,
+      "residuals": 1
+    },
+    "old_sql_plan": {
+      "access": "scan",
+      "candidates": 3,
+      "snapshot": 2,
+      "residuals": 1
+    },
+    "steps": [
+      {
+        "step": "建立 spectra 关系",
+        "request": "POST /relations",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "name": "spectra",
+          "primary": "sample",
+          "columns": [
+            {
+              "name": "sample",
+              "type": "int",
+              "nullable": false
+            },
+            {
+              "name": "band",
+              "type": "text",
+              "nullable": false
+            },
+            {
+              "name": "amplitude",
+              "type": "int",
+              "nullable": true
+            }
+          ],
+          "created": 1
+        }
+      },
+      {
+        "step": "种子事务开始",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "4936b3adcf14891b7804ca5d621e15dc",
+          "snapshot": 1,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.218280276Z"
+        }
+      },
+      {
+        "step": "种子写入 sample=1",
+        "request": "POST /transactions/4936b3adcf14891b7804ca5d621e15dc/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子写入 sample=2",
+        "request": "POST /transactions/4936b3adcf14891b7804ca5d621e15dc/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子写入 sample=3",
+        "request": "POST /transactions/4936b3adcf14891b7804ca5d621e15dc/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子提交",
+        "request": "POST /transactions/4936b3adcf14891b7804ca5d621e15dc/commit",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 2,
+          "writes": 3
+        }
+      },
+      {
+        "step": "旧读写事务 T_old 开始（固定目录快照）",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "08fcd1a85add05758a270adfdfd16526",
+          "snapshot": 2,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.222470923Z"
+        }
+      },
+      {
+        "step": "旧只读事务 T_ro 开始",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "c1d2085b87b889c7f3c094c549ac02ef",
+          "snapshot": 2,
+          "read_only": true,
+          "started": "2026-11-18T09:18:34.222688338Z"
+        }
+      },
+      {
+        "step": "建索引前 /stats",
+        "request": "GET /stats",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 2,
+          "horizon": 0,
+          "active": [
+            {
+              "id": "08fcd1a85add05758a270adfdfd16526",
+              "snapshot": 2,
+              "read_only": false,
+              "started": "2026-11-18T09:18:34.222470923Z"
+            },
+            {
+              "id": "c1d2085b87b889c7f3c094c549ac02ef",
+              "snapshot": 2,
+              "read_only": true,
+              "started": "2026-11-18T09:18:34.222688338Z"
+            }
+          ],
+          "keys": 3,
+          "versions": 3,
+          "index_entries": {},
+          "journal_records": 2,
+          "history_base": 0,
+          "recovered_tail_bytes": 0,
+          "commits_since_open": 1,
+          "conflicts_since_open": 0,
+          "queries_since_open": 0
+        }
+      },
+      {
+        "step": "在线建立非唯一索引 by_amplitude",
+        "request": "POST /indexes",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "name": "by_amplitude",
+          "relation": "spectra",
+          "column": "amplitude",
+          "unique": false,
+          "created": 3
+        }
+      },
+      {
+        "step": "建索引后 /stats（活动事务仍在）",
+        "request": "GET /stats",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 3,
+          "horizon": 0,
+          "active": [
+            {
+              "id": "08fcd1a85add05758a270adfdfd16526",
+              "snapshot": 2,
+              "read_only": false,
+              "started": "2026-11-18T09:18:34.222470923Z"
+            },
+            {
+              "id": "c1d2085b87b889c7f3c094c549ac02ef",
+              "snapshot": 2,
+              "read_only": true,
+              "started": "2026-11-18T09:18:34.222688338Z"
+            }
+          ],
+          "keys": 3,
+          "versions": 3,
+          "index_entries": {
+            "by_amplitude": 3
+          },
+          "journal_records": 3,
+          "history_base": 0,
+          "recovered_tail_bytes": 0,
+          "commits_since_open": 1,
+          "conflicts_since_open": 0,
+          "queries_since_open": 0
+        }
+      },
+      {
+        "step": "当前目录 /catalog",
+        "request": "GET /catalog",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "indexes": [
+            {
+              "name": "by_amplitude",
+              "relation": "spectra",
+              "column": "amplitude",
+              "unique": false,
+              "created": 3
+            }
+          ],
+          "relations": [
+            {
+              "name": "spectra",
+              "primary": "sample",
+              "columns": [
+                {
+                  "name": "sample",
+                  "type": "int",
+                  "nullable": false
+                },
+                {
+                  "name": "band",
+                  "type": "text",
+                  "nullable": false
+                },
+                {
+                  "name": "amplitude",
+                  "type": "int",
+                  "nullable": true
+                }
+              ],
+              "created": 1
+            }
+          ]
+        }
+      },
+      {
+        "step": "T_old 同条件查询（含新索引列）",
+        "request": "POST /query",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "rows": [
+            {
+              "amplitude": 20,
+              "band": "b2",
+              "sample": 2
+            }
+          ],
+          "plan": {
+            "access": "scan",
+            "candidates": 3,
+            "snapshot": 2,
+            "residuals": 1
+          },
+          "scanned": 3,
+          "matched": 1,
+          "truncated": false
+        }
+      },
+      {
+        "step": "T_ro 同条件查询",
+        "request": "POST /query",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "rows": [
+            {
+              "amplitude": 20,
+              "band": "b2",
+              "sample": 2
+            }
+          ],
+          "plan": {
+            "access": "scan",
+            "candidates": 3,
+            "snapshot": 2,
+            "residuals": 1
+          },
+          "scanned": 3,
+          "matched": 1,
+          "truncated": false
+        }
+      },
+      {
+        "step": "当前普通读同条件查询",
+        "request": "POST /query",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "rows": [
+            {
+              "amplitude": 20,
+              "band": "b2",
+              "sample": 2
+            }
+          ],
+          "plan": {
+            "access": "index",
+            "index": "by_amplitude",
+            "candidates": 1,
+            "snapshot": 3,
+            "residuals": 1
+          },
+          "scanned": 1,
+          "matched": 1,
+          "truncated": false
+        }
+      },
+      {
+        "step": "按序号 at=2 历史查询",
+        "request": "POST /query",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "rows": [
+            {
+              "amplitude": 20,
+              "band": "b2",
+              "sample": 2
+            }
+          ],
+          "plan": {
+            "access": "scan",
+            "candidates": 3,
+            "snapshot": 2,
+            "residuals": 1
+          },
+          "scanned": 3,
+          "matched": 1,
+          "truncated": false
+        }
+      },
+      {
+        "step": "T_old 走 SQL 入口同条件查询（同快照同计划）",
+        "request": "POST /sql",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "rows": [
+            {
+              "sample": 2
+            }
+          ],
+          "plan": {
+            "access": "scan",
+            "candidates": 3,
+            "snapshot": 2,
+            "residuals": 1
+          },
+          "scanned": 3,
+          "matched": 1,
+          "truncated": false
+        }
+      },
+      {
+        "step": "T_old 继续写入 sample=4（旧关系仍可改）",
+        "request": "POST /transactions/08fcd1a85add05758a270adfdfd16526/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "T_old 提交成功",
+        "request": "POST /transactions/08fcd1a85add05758a270adfdfd16526/commit",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 4,
+          "writes": 1
+        }
+      },
+      {
+        "step": "T_ro 撤销",
+        "request": "POST /transactions/c1d2085b87b889c7f3c094c549ac02ef/rollback",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "rolled_back"
+        }
+      }
+    ]
+  },
+  {
+    "scenario": "B 后建唯一索引否决旧事务提交",
+    "catalog_indexes": [
+      {
+        "name": "by_band_uq",
+        "relation": "spectra",
+        "column": "band",
+        "unique": true,
+        "created": 3
+      }
+    ],
+    "ok_commit": {
+      "sequence": 4,
+      "writes": 1
+    },
+    "active_after": [],
+    "shared_rows": [],
+    "steps": [
+      {
+        "step": "建立 spectra 关系",
+        "request": "POST /relations",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "name": "spectra",
+          "primary": "sample",
+          "columns": [
+            {
+              "name": "sample",
+              "type": "int",
+              "nullable": false
+            },
+            {
+              "name": "band",
+              "type": "text",
+              "nullable": false
+            },
+            {
+              "name": "amplitude",
+              "type": "int",
+              "nullable": true
+            }
+          ],
+          "created": 1
+        }
+      },
+      {
+        "step": "种子事务开始",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "933c31717b501b53278cd1dae3e0880e",
+          "snapshot": 1,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.268268707Z"
+        }
+      },
+      {
+        "step": "种子写入 sample=1",
+        "request": "POST /transactions/933c31717b501b53278cd1dae3e0880e/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子写入 sample=2",
+        "request": "POST /transactions/933c31717b501b53278cd1dae3e0880e/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子写入 sample=3",
+        "request": "POST /transactions/933c31717b501b53278cd1dae3e0880e/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子提交",
+        "request": "POST /transactions/933c31717b501b53278cd1dae3e0880e/commit",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 2,
+          "writes": 3
+        }
+      },
+      {
+        "step": "T_dup 开始",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "3c6972d1ae85d014ab8ee4b12a1b5112",
+          "snapshot": 2,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.272450979Z"
+        }
+      },
+      {
+        "step": "T_dup 暂存 sample=4 band=shared",
+        "request": "POST /transactions/3c6972d1ae85d014ab8ee4b12a1b5112/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "T_dup 暂存 sample=5 band=shared（暂存内重复）",
+        "request": "POST /transactions/3c6972d1ae85d014ab8ee4b12a1b5112/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "T_ok 开始",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "86602bca676cefccf9a6bd2790a27adc",
+          "snapshot": 2,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.273062684Z"
+        }
+      },
+      {
+        "step": "T_ok 暂存 sample=6 band=unique6",
+        "request": "POST /transactions/86602bca676cefccf9a6bd2790a27adc/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "对 band 建唯一索引（只看已提交数据，构建成功）",
+        "request": "POST /indexes",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "name": "by_band_uq",
+          "relation": "spectra",
+          "column": "band",
+          "unique": true,
+          "created": 3
+        }
+      },
+      {
+        "step": "构建后目录含唯一索引",
+        "request": "GET /catalog",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "indexes": [
+            {
+              "name": "by_band_uq",
+              "relation": "spectra",
+              "column": "band",
+              "unique": true,
+              "created": 3
+            }
+          ],
+          "relations": [
+            {
+              "name": "spectra",
+              "primary": "sample",
+              "columns": [
+                {
+                  "name": "sample",
+                  "type": "int",
+                  "nullable": false
+                },
+                {
+                  "name": "band",
+                  "type": "text",
+                  "nullable": false
+                },
+                {
+                  "name": "amplitude",
+                  "type": "int",
+                  "nullable": true
+                }
+              ],
+              "created": 1
+            }
+          ]
+        }
+      },
+      {
+        "step": "T_dup 提交：唯一冲突 409，事务闭合",
+        "request": "POST /transactions/3c6972d1ae85d014ab8ee4b12a1b5112/commit",
+        "http": 409,
+        "expect": 409,
+        "body": {
+          "error": {
+            "code": "conflict",
+            "message": "unique constraint by_band_uq violated"
+          }
+        }
+      },
+      {
+        "step": "T_dup 再次提交：404（闭合不可复用）",
+        "request": "POST /transactions/3c6972d1ae85d014ab8ee4b12a1b5112/commit",
+        "http": 404,
+        "expect": 404,
+        "body": {
+          "error": {
+            "code": "not_found",
+            "message": "transaction not active"
+          }
+        }
+      },
+      {
+        "step": "T_ok 提交：不冲突，成功",
+        "request": "POST /transactions/86602bca676cefccf9a6bd2790a27adc/commit",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 4,
+          "writes": 1
+        }
+      },
+      {
+        "step": "失败后 /stats：无残留活动事务",
+        "request": "GET /stats",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 4,
+          "horizon": 0,
+          "active": [],
+          "keys": 4,
+          "versions": 4,
+          "index_entries": {
+            "by_band_uq": 4
+          },
+          "journal_records": 4,
+          "history_base": 0,
+          "recovered_tail_bytes": 0,
+          "commits_since_open": 2,
+          "conflicts_since_open": 1,
+          "queries_since_open": 0
+        }
+      },
+      {
+        "step": "当前读数确认 T_dup 写集未泄漏",
+        "request": "POST /query",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "rows": [],
+          "plan": {
+            "access": "index",
+            "index": "by_band_uq",
+            "candidates": 0,
+            "snapshot": 4,
+            "residuals": 1
+          },
+          "scanned": 0,
+          "matched": 0,
+          "truncated": false
+        }
+      }
+    ]
+  },
+  {
+    "scenario": "C 索引先建时的提交期约束（对照）",
+    "steps": [
+      {
+        "step": "建立 spectra 关系",
+        "request": "POST /relations",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "name": "spectra",
+          "primary": "sample",
+          "columns": [
+            {
+              "name": "sample",
+              "type": "int",
+              "nullable": false
+            },
+            {
+              "name": "band",
+              "type": "text",
+              "nullable": false
+            },
+            {
+              "name": "amplitude",
+              "type": "int",
+              "nullable": true
+            }
+          ],
+          "created": 1
+        }
+      },
+      {
+        "step": "种子事务开始",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "d14c776e4fbe81f390a6d0aab9d746c4",
+          "snapshot": 1,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.317422142Z"
+        }
+      },
+      {
+        "step": "种子写入 sample=1",
+        "request": "POST /transactions/d14c776e4fbe81f390a6d0aab9d746c4/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子写入 sample=2",
+        "request": "POST /transactions/d14c776e4fbe81f390a6d0aab9d746c4/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子写入 sample=3",
+        "request": "POST /transactions/d14c776e4fbe81f390a6d0aab9d746c4/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子提交",
+        "request": "POST /transactions/d14c776e4fbe81f390a6d0aab9d746c4/commit",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 2,
+          "writes": 3
+        }
+      },
+      {
+        "step": "先建唯一索引 by_band_uq",
+        "request": "POST /indexes",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "name": "by_band_uq",
+          "relation": "spectra",
+          "column": "band",
+          "unique": true,
+          "created": 3
+        }
+      },
+      {
+        "step": "T_a 开始（索引已在其快照中）",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "3cca3ddea18ea69b45aa0effa277114a",
+          "snapshot": 3,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.325280396Z"
+        }
+      },
+      {
+        "step": "T_b 开始",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "5e8da98b2e518719b4051815eaf4d638",
+          "snapshot": 3,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.325618145Z"
+        }
+      },
+      {
+        "step": "T_a 暂存 sample=4 band=shared",
+        "request": "POST /transactions/3cca3ddea18ea69b45aa0effa277114a/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "T_b 暂存 sample=5 band=shared",
+        "request": "POST /transactions/5e8da98b2e518719b4051815eaf4d638/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "T_a 先提交成功",
+        "request": "POST /transactions/3cca3ddea18ea69b45aa0effa277114a/commit",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 4,
+          "writes": 1
+        }
+      },
+      {
+        "step": "T_b 提交：409 唯一冲突并闭合",
+        "request": "POST /transactions/5e8da98b2e518719b4051815eaf4d638/commit",
+        "http": 409,
+        "expect": 409,
+        "body": {
+          "error": {
+            "code": "conflict",
+            "message": "unique constraint by_band_uq violated"
+          }
+        }
+      },
+      {
+        "step": "T_swap 开始：做唯一值互换",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "86836adcf6d049b81d19ffa2c6d97792",
+          "snapshot": 4,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.330181748Z"
+        }
+      },
+      {
+        "step": "T_swap 把 sample=1 改为 band=b2",
+        "request": "POST /transactions/86836adcf6d049b81d19ffa2c6d97792/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "T_swap 把 sample=2 改为 band=b1",
+        "request": "POST /transactions/86836adcf6d049b81d19ffa2c6d97792/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "事务内互换唯一值：提交成功",
+        "request": "POST /transactions/86836adcf6d049b81d19ffa2c6d97792/commit",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 5,
+          "writes": 2
+        }
+      },
+      {
+        "step": "T_coll 开始：改成现存他行的值",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "cf0232cd9241a0dd8275b4015921c9ef",
+          "snapshot": 5,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.334122146Z"
+        }
+      },
+      {
+        "step": "T_coll 把 sample=3 改为 band=b1（与 sample=2 现状冲突）",
+        "request": "POST /transactions/cf0232cd9241a0dd8275b4015921c9ef/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "T_coll 提交：按最终状态判 409",
+        "request": "POST /transactions/cf0232cd9241a0dd8275b4015921c9ef/commit",
+        "http": 409,
+        "expect": 409,
+        "body": {
+          "error": {
+            "code": "conflict",
+            "message": "unique constraint by_band_uq violated"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "scenario": "D 写冲突不依赖索引且整笔回滚",
+    "rows": [
+      {
+        "amplitude": 111,
+        "band": "b1",
+        "sample": 1
+      },
+      {
+        "amplitude": 20,
+        "band": "b2",
+        "sample": 2
+      },
+      {
+        "amplitude": 30,
+        "band": "b3",
+        "sample": 3
+      }
+    ],
+    "steps": [
+      {
+        "step": "建立 spectra 关系",
+        "request": "POST /relations",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "name": "spectra",
+          "primary": "sample",
+          "columns": [
+            {
+              "name": "sample",
+              "type": "int",
+              "nullable": false
+            },
+            {
+              "name": "band",
+              "type": "text",
+              "nullable": false
+            },
+            {
+              "name": "amplitude",
+              "type": "int",
+              "nullable": true
+            }
+          ],
+          "created": 1
+        }
+      },
+      {
+        "step": "种子事务开始",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "a64f6907cde2fe2dd50c90fa4e3140b3",
+          "snapshot": 1,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.374417623Z"
+        }
+      },
+      {
+        "step": "种子写入 sample=1",
+        "request": "POST /transactions/a64f6907cde2fe2dd50c90fa4e3140b3/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子写入 sample=2",
+        "request": "POST /transactions/a64f6907cde2fe2dd50c90fa4e3140b3/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子写入 sample=3",
+        "request": "POST /transactions/a64f6907cde2fe2dd50c90fa4e3140b3/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子提交",
+        "request": "POST /transactions/a64f6907cde2fe2dd50c90fa4e3140b3/commit",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 2,
+          "writes": 3
+        }
+      },
+      {
+        "step": "T_x 开始（无索引时期）",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "867ecca85bf369fbb9e3f149fb814efc",
+          "snapshot": 2,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.378555479Z"
+        }
+      },
+      {
+        "step": "T_y 开始（无索引时期）",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "04a9517277d116faccbe9a98dc7c9342",
+          "snapshot": 2,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.378714811Z"
+        }
+      },
+      {
+        "step": "T_x 暂存 sample=1 amplitude=111",
+        "request": "POST /transactions/867ecca85bf369fbb9e3f149fb814efc/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "T_y 暂存 sample=1 amplitude=222",
+        "request": "POST /transactions/04a9517277d116faccbe9a98dc7c9342/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "T_y 附带暂存 sample=7",
+        "request": "POST /transactions/04a9517277d116faccbe9a98dc7c9342/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "交错中建立非唯一索引 by_amplitude",
+        "request": "POST /indexes",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "name": "by_amplitude",
+          "relation": "spectra",
+          "column": "amplitude",
+          "unique": false,
+          "created": 3
+        }
+      },
+      {
+        "step": "T_x 先提交成功",
+        "request": "POST /transactions/867ecca85bf369fbb9e3f149fb814efc/commit",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 4,
+          "writes": 1
+        }
+      },
+      {
+        "step": "T_y 提交：同键写冲突 409，附带写入一并丢弃",
+        "request": "POST /transactions/04a9517277d116faccbe9a98dc7c9342/commit",
+        "http": 409,
+        "expect": 409,
+        "body": {
+          "error": {
+            "code": "conflict",
+            "message": "write conflict on spectra"
+          }
+        }
+      },
+      {
+        "step": "当前读数：sample=7 不存在，sample=1 是 T_x 的值",
+        "request": "POST /query",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "rows": [
+            {
+              "amplitude": 111,
+              "band": "b1",
+              "sample": 1
+            },
+            {
+              "amplitude": 20,
+              "band": "b2",
+              "sample": 2
+            },
+            {
+              "amplitude": 30,
+              "band": "b3",
+              "sample": 3
+            }
+          ],
+          "plan": {
+            "access": "scan",
+            "candidates": 3,
+            "snapshot": 4,
+            "residuals": 0
+          },
+          "scanned": 3,
+          "matched": 3,
+          "truncated": false
+        }
+      }
+    ]
+  },
+  {
+    "scenario": "E 新关系可见性与重启核对",
+    "relation_created": 3,
+    "active_before_restart": [
+      "5b81335a25669f2dacef53e35c8e1e00"
+    ],
+    "change_kinds": [
+      "relation",
+      "commit"
+    ],
+    "active_after_restart": [],
+    "relations_after": [
+      {
+        "name": "readings",
+        "primary": "k",
+        "columns": [
+          {
+            "name": "k",
+            "type": "int",
+            "nullable": false
+          },
+          {
+            "name": "v",
+            "type": "text",
+            "nullable": true
+          }
+        ],
+        "created": 3
+      },
+      {
+        "name": "spectra",
+        "primary": "sample",
+        "columns": [
+          {
+            "name": "sample",
+            "type": "int",
+            "nullable": false
+          },
+          {
+            "name": "band",
+            "type": "text",
+            "nullable": false
+          },
+          {
+            "name": "amplitude",
+            "type": "int",
+            "nullable": true
+          }
+        ],
+        "created": 1
+      }
+    ],
+    "plan_after": {
+      "access": "scan",
+      "candidates": 3,
+      "snapshot": 4,
+      "residuals": 1
+    },
+    "ghost_rows": [],
+    "steps": [
+      {
+        "step": "建立 spectra 关系",
+        "request": "POST /relations",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "name": "spectra",
+          "primary": "sample",
+          "columns": [
+            {
+              "name": "sample",
+              "type": "int",
+              "nullable": false
+            },
+            {
+              "name": "band",
+              "type": "text",
+              "nullable": false
+            },
+            {
+              "name": "amplitude",
+              "type": "int",
+              "nullable": true
+            }
+          ],
+          "created": 1
+        }
+      },
+      {
+        "step": "种子事务开始",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "c85cad0ba0da1fcce17452463b6dd92c",
+          "snapshot": 1,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.423081602Z"
+        }
+      },
+      {
+        "step": "种子写入 sample=1",
+        "request": "POST /transactions/c85cad0ba0da1fcce17452463b6dd92c/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子写入 sample=2",
+        "request": "POST /transactions/c85cad0ba0da1fcce17452463b6dd92c/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子写入 sample=3",
+        "request": "POST /transactions/c85cad0ba0da1fcce17452463b6dd92c/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子提交",
+        "request": "POST /transactions/c85cad0ba0da1fcce17452463b6dd92c/commit",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 2,
+          "writes": 3
+        }
+      },
+      {
+        "step": "T_old 在新关系之前开始",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "5b81335a25669f2dacef53e35c8e1e00",
+          "snapshot": 2,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.42703975Z"
+        }
+      },
+      {
+        "step": "在线建立新关系 readings",
+        "request": "POST /relations",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "name": "readings",
+          "primary": "k",
+          "columns": [
+            {
+              "name": "k",
+              "type": "int",
+              "nullable": false
+            },
+            {
+              "name": "v",
+              "type": "text",
+              "nullable": true
+            }
+          ],
+          "created": 3
+        }
+      },
+      {
+        "step": "T_old 写新关系：409 目录快照之外",
+        "request": "POST /transactions/5b81335a25669f2dacef53e35c8e1e00/put",
+        "http": 409,
+        "expect": 409,
+        "body": {
+          "error": {
+            "code": "conflict",
+            "message": "relation outside transaction catalog snapshot"
+          }
+        }
+      },
+      {
+        "step": "T_old 查新关系：410 该序号关系不存在",
+        "request": "POST /query",
+        "http": 410,
+        "expect": 410,
+        "body": {
+          "error": {
+            "code": "snapshot",
+            "message": "relation did not exist at snapshot"
+          }
+        }
+      },
+      {
+        "step": "新事务 T_new 开始",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "91ccc57cb66d688ad53ed47c1696ab7f",
+          "snapshot": 3,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.430577483Z"
+        }
+      },
+      {
+        "step": "T_new 写新关系成功",
+        "request": "POST /transactions/91ccc57cb66d688ad53ed47c1696ab7f/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "T_new 提交",
+        "request": "POST /transactions/91ccc57cb66d688ad53ed47c1696ab7f/commit",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 4,
+          "writes": 1
+        }
+      },
+      {
+        "step": "at=2 查新关系：410",
+        "request": "POST /query",
+        "http": 410,
+        "expect": 410,
+        "body": {
+          "error": {
+            "code": "snapshot",
+            "message": "relation did not exist at snapshot"
+          }
+        }
+      },
+      {
+        "step": "T_old 仍可改旧关系 spectra",
+        "request": "POST /transactions/5b81335a25669f2dacef53e35c8e1e00/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "重启前 /stats：两个活动事务",
+        "request": "GET /stats",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 4,
+          "horizon": 0,
+          "active": [
+            {
+              "id": "5b81335a25669f2dacef53e35c8e1e00",
+              "snapshot": 2,
+              "read_only": false,
+              "started": "2026-11-18T09:18:34.42703975Z"
+            }
+          ],
+          "keys": 4,
+          "versions": 4,
+          "index_entries": {},
+          "journal_records": 4,
+          "history_base": 0,
+          "recovered_tail_bytes": 0,
+          "commits_since_open": 2,
+          "conflicts_since_open": 0,
+          "queries_since_open": 0
+        }
+      },
+      {
+        "step": "变更流包含 relation 记录",
+        "request": "GET /changes?after=2&limit=20",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "records": [
+            {
+              "format": 1,
+              "sequence": 3,
+              "kind": "relation",
+              "relation": {
+                "name": "readings",
+                "primary": "k",
+                "columns": [
+                  {
+                    "name": "k",
+                    "type": "int",
+                    "nullable": false
+                  },
+                  {
+                    "name": "v",
+                    "type": "text",
+                    "nullable": true
+                  }
+                ],
+                "created": 3
+              }
+            },
+            {
+              "format": 1,
+              "sequence": 4,
+              "kind": "commit",
+              "transaction": "91ccc57cb66d688ad53ed47c1696ab7f",
+              "writes": [
+                {
+                  "relation": "readings",
+                  "key": "int:1",
+                  "row": {
+                    "k": 1,
+                    "v": "x"
+                  }
+                }
+              ]
+            }
+          ],
+          "cursor": 4,
+          "head": 4,
+          "history_base": 0,
+          "more": false
+        }
+      },
+      {
+        "step": "重启后 /stats：活动事务清零（私有写集不持久化）",
+        "request": "GET /stats",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 4,
+          "horizon": 0,
+          "active": [],
+          "keys": 4,
+          "versions": 4,
+          "index_entries": {},
+          "journal_records": 4,
+          "history_base": 0,
+          "recovered_tail_bytes": 0,
+          "commits_since_open": 0,
+          "conflicts_since_open": 0,
+          "queries_since_open": 0
+        }
+      },
+      {
+        "step": "重启后目录：关系 created 序号不变",
+        "request": "GET /catalog",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "indexes": [],
+          "relations": [
+            {
+              "name": "readings",
+              "primary": "k",
+              "columns": [
+                {
+                  "name": "k",
+                  "type": "int",
+                  "nullable": false
+                },
+                {
+                  "name": "v",
+                  "type": "text",
+                  "nullable": true
+                }
+              ],
+              "created": 3
+            },
+            {
+              "name": "spectra",
+              "primary": "sample",
+              "columns": [
+                {
+                  "name": "sample",
+                  "type": "int",
+                  "nullable": false
+                },
+                {
+                  "name": "band",
+                  "type": "text",
+                  "nullable": false
+                },
+                {
+                  "name": "amplitude",
+                  "type": "int",
+                  "nullable": true
+                }
+              ],
+              "created": 1
+            }
+          ]
+        }
+      },
+      {
+        "step": "重启后查询正常（该场景无索引，计划为 scan）",
+        "request": "POST /query",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "rows": [
+            {
+              "amplitude": 10,
+              "band": "b1",
+              "sample": 1
+            }
+          ],
+          "plan": {
+            "access": "scan",
+            "candidates": 3,
+            "snapshot": 4,
+            "residuals": 1
+          },
+          "scanned": 3,
+          "matched": 1,
+          "truncated": false
+        }
+      },
+      {
+        "step": "T_old 复活尝试：404",
+        "request": "POST /transactions/5b81335a25669f2dacef53e35c8e1e00/commit",
+        "http": 404,
+        "expect": 404,
+        "body": {
+          "error": {
+            "code": "not_found",
+            "message": "transaction not active"
+          }
+        }
+      },
+      {
+        "step": "T_old 未提交的 sample=4 不存在",
+        "request": "POST /query",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "rows": [],
+          "plan": {
+            "access": "scan",
+            "candidates": 3,
+            "snapshot": 4,
+            "residuals": 1
+          },
+          "scanned": 3,
+          "matched": 0,
+          "truncated": false
+        }
+      }
+    ]
+  },
+  {
+    "scenario": "F 回收钉住与重启后约束核对",
+    "pinned": {
+      "horizon": 2,
+      "removed": 0,
+      "retained": 4,
+      "pinned": true
+    },
+    "reclaimed": {
+      "horizon": 3,
+      "removed": 1,
+      "retained": 3,
+      "pinned": false
+    },
+    "indexes_after_restart": [
+      {
+        "name": "by_band_uq",
+        "relation": "spectra",
+        "column": "band",
+        "unique": true,
+        "created": 4
+      }
+    ],
+    "commits_since_open": 0,
+    "keys": 3,
+    "steps": [
+      {
+        "step": "建立 spectra 关系",
+        "request": "POST /relations",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "name": "spectra",
+          "primary": "sample",
+          "columns": [
+            {
+              "name": "sample",
+              "type": "int",
+              "nullable": false
+            },
+            {
+              "name": "band",
+              "type": "text",
+              "nullable": false
+            },
+            {
+              "name": "amplitude",
+              "type": "int",
+              "nullable": true
+            }
+          ],
+          "created": 1
+        }
+      },
+      {
+        "step": "种子事务开始",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "0d66eb1e5e8686b6788289e0f6f8dfeb",
+          "snapshot": 1,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.506132252Z"
+        }
+      },
+      {
+        "step": "种子写入 sample=1",
+        "request": "POST /transactions/0d66eb1e5e8686b6788289e0f6f8dfeb/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子写入 sample=2",
+        "request": "POST /transactions/0d66eb1e5e8686b6788289e0f6f8dfeb/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子写入 sample=3",
+        "request": "POST /transactions/0d66eb1e5e8686b6788289e0f6f8dfeb/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子提交",
+        "request": "POST /transactions/0d66eb1e5e8686b6788289e0f6f8dfeb/commit",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 2,
+          "writes": 3
+        }
+      },
+      {
+        "step": "长只读事务 T_ro 固定旧快照",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "a74618c78ac1b5981d9b946226ebe7ea",
+          "snapshot": 2,
+          "read_only": true,
+          "started": "2026-11-18T09:18:34.510343482Z"
+        }
+      },
+      {
+        "step": "T_w 开始更新旧行",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "1c5ec3c897e22cd8dc9beb0da519e533",
+          "snapshot": 2,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.510555856Z"
+        }
+      },
+      {
+        "step": "T_w 更新 sample=1 amplitude=999",
+        "request": "POST /transactions/1c5ec3c897e22cd8dc9beb0da519e533/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "T_w 提交",
+        "request": "POST /transactions/1c5ec3c897e22cd8dc9beb0da519e533/commit",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 3,
+          "writes": 1
+        }
+      },
+      {
+        "step": "取当前 head",
+        "request": "GET /stats",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 3,
+          "horizon": 0,
+          "active": [
+            {
+              "id": "a74618c78ac1b5981d9b946226ebe7ea",
+              "snapshot": 2,
+              "read_only": true,
+              "started": "2026-11-18T09:18:34.510343482Z"
+            }
+          ],
+          "keys": 3,
+          "versions": 4,
+          "index_entries": {},
+          "journal_records": 3,
+          "history_base": 0,
+          "recovered_tail_bytes": 0,
+          "commits_since_open": 2,
+          "conflicts_since_open": 0,
+          "queries_since_open": 0
+        }
+      },
+      {
+        "step": "建立唯一索引 by_band_uq",
+        "request": "POST /indexes",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "name": "by_band_uq",
+          "relation": "spectra",
+          "column": "band",
+          "unique": true,
+          "created": 4
+        }
+      },
+      {
+        "step": "请求水位 3 的 vacuum，被 T_ro 钉住",
+        "request": "POST /vacuum",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "horizon": 2,
+          "removed": 0,
+          "retained": 4,
+          "pinned": true
+        }
+      },
+      {
+        "step": "T_ro 仍读到旧值 amplitude=10",
+        "request": "POST /query",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "rows": [
+            {
+              "amplitude": 10,
+              "band": "b1",
+              "sample": 1
+            }
+          ],
+          "plan": {
+            "access": "scan",
+            "candidates": 3,
+            "snapshot": 2,
+            "residuals": 1
+          },
+          "scanned": 3,
+          "matched": 1,
+          "truncated": false
+        }
+      },
+      {
+        "step": "T_ro 关闭",
+        "request": "POST /transactions/a74618c78ac1b5981d9b946226ebe7ea/rollback",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "rolled_back"
+        }
+      },
+      {
+        "step": "关闭后再次 vacuum 推进水位",
+        "request": "POST /vacuum",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "horizon": 3,
+          "removed": 1,
+          "retained": 3,
+          "pinned": false
+        }
+      },
+      {
+        "step": "低于水位的历史读：410",
+        "request": "POST /query",
+        "http": 410,
+        "expect": 410,
+        "body": {
+          "error": {
+            "code": "snapshot",
+            "message": "snapshot unavailable; retained interval 3..6"
+          }
+        }
+      },
+      {
+        "step": "重启前 checkpoint",
+        "request": "POST /checkpoint",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 6
+        }
+      },
+      {
+        "step": "重启后唯一索引仍在目录",
+        "request": "GET /catalog",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "indexes": [
+            {
+              "name": "by_band_uq",
+              "relation": "spectra",
+              "column": "band",
+              "unique": true,
+              "created": 4
+            }
+          ],
+          "relations": [
+            {
+              "name": "spectra",
+              "primary": "sample",
+              "columns": [
+                {
+                  "name": "sample",
+                  "type": "int",
+                  "nullable": false
+                },
+                {
+                  "name": "band",
+                  "type": "text",
+                  "nullable": false
+                },
+                {
+                  "name": "amplitude",
+                  "type": "int",
+                  "nullable": true
+                }
+              ],
+              "created": 1
+            }
+          ]
+        }
+      },
+      {
+        "step": "重启后新事务",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "4843285da3c91718053309a87f270a4e",
+          "snapshot": 6,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.56646826Z"
+        }
+      },
+      {
+        "step": "新事务暂存与现存 band 冲突的行",
+        "request": "POST /transactions/4843285da3c91718053309a87f270a4e/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "重启后唯一约束仍强制：409",
+        "request": "POST /transactions/4843285da3c91718053309a87f270a4e/commit",
+        "http": 409,
+        "expect": 409,
+        "body": {
+          "error": {
+            "code": "conflict",
+            "message": "unique constraint by_band_uq violated"
+          }
+        }
+      },
+      {
+        "step": "重启后计数归零但数据仍在",
+        "request": "GET /stats",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 6,
+          "horizon": 3,
+          "active": [],
+          "keys": 3,
+          "versions": 3,
+          "index_entries": {
+            "by_band_uq": 3
+          },
+          "journal_records": 6,
+          "history_base": 0,
+          "recovered_tail_bytes": 0,
+          "commits_since_open": 0,
+          "conflicts_since_open": 1,
+          "queries_since_open": 0
+        }
+      }
+    ]
+  },
+  {
+    "scenario": "G 失败 DDL 的原子性与重复请求",
+    "head_before": 3,
+    "head_after": 3,
+    "indexes": [],
+    "steps": [
+      {
+        "step": "建立 spectra 关系",
+        "request": "POST /relations",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "name": "spectra",
+          "primary": "sample",
+          "columns": [
+            {
+              "name": "sample",
+              "type": "int",
+              "nullable": false
+            },
+            {
+              "name": "band",
+              "type": "text",
+              "nullable": false
+            },
+            {
+              "name": "amplitude",
+              "type": "int",
+              "nullable": true
+            }
+          ],
+          "created": 1
+        }
+      },
+      {
+        "step": "种子事务开始",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "de73e8bd336d698b14609028bc7bc9cc",
+          "snapshot": 1,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.606313488Z"
+        }
+      },
+      {
+        "step": "种子写入 sample=1",
+        "request": "POST /transactions/de73e8bd336d698b14609028bc7bc9cc/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子写入 sample=2",
+        "request": "POST /transactions/de73e8bd336d698b14609028bc7bc9cc/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子写入 sample=3",
+        "request": "POST /transactions/de73e8bd336d698b14609028bc7bc9cc/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "种子提交",
+        "request": "POST /transactions/de73e8bd336d698b14609028bc7bc9cc/commit",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 2,
+          "writes": 3
+        }
+      },
+      {
+        "step": "写入两行相同 band 的已提交数据",
+        "request": "POST /transactions",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "id": "366cecd7f64fd68e577707fc02c0c1a4",
+          "snapshot": 2,
+          "read_only": false,
+          "started": "2026-11-18T09:18:34.610123721Z"
+        }
+      },
+      {
+        "step": "sample=4 band=dup",
+        "request": "POST /transactions/366cecd7f64fd68e577707fc02c0c1a4/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "sample=5 band=dup",
+        "request": "POST /transactions/366cecd7f64fd68e577707fc02c0c1a4/put",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "state": "staged"
+        }
+      },
+      {
+        "step": "提交重复数据",
+        "request": "POST /transactions/366cecd7f64fd68e577707fc02c0c1a4/commit",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 3,
+          "writes": 2
+        }
+      },
+      {
+        "step": "失败构建前 head 与目录",
+        "request": "GET /stats",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 3,
+          "horizon": 0,
+          "active": [],
+          "keys": 5,
+          "versions": 5,
+          "index_entries": {},
+          "journal_records": 3,
+          "history_base": 0,
+          "recovered_tail_bytes": 0,
+          "commits_since_open": 2,
+          "conflicts_since_open": 0,
+          "queries_since_open": 0
+        }
+      },
+      {
+        "step": "对含重复值的 band 建唯一索引：409 且不发布",
+        "request": "POST /indexes",
+        "http": 409,
+        "expect": 409,
+        "body": {
+          "error": {
+            "code": "conflict",
+            "message": "unique constraint bad_unique violated"
+          }
+        }
+      },
+      {
+        "step": "失败构建后 head 不变",
+        "request": "GET /stats",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "sequence": 3,
+          "horizon": 0,
+          "active": [],
+          "keys": 5,
+          "versions": 5,
+          "index_entries": {},
+          "journal_records": 3,
+          "history_base": 0,
+          "recovered_tail_bytes": 0,
+          "commits_since_open": 2,
+          "conflicts_since_open": 0,
+          "queries_since_open": 0
+        }
+      },
+      {
+        "step": "目录中没有 bad_unique",
+        "request": "GET /catalog",
+        "http": 200,
+        "expect": 200,
+        "body": {
+          "indexes": [],
+          "relations": [
+            {
+              "name": "spectra",
+              "primary": "sample",
+              "columns": [
+                {
+                  "name": "sample",
+                  "type": "int",
+                  "nullable": false
+                },
+                {
+                  "name": "band",
+                  "type": "text",
+                  "nullable": false
+                },
+                {
+                  "name": "amplitude",
+                  "type": "int",
+                  "nullable": true
+                }
+              ],
+              "created": 1
+            }
+          ]
+        }
+      },
+      {
+        "step": "先建非唯一同名索引 bad_unique",
+        "request": "POST /indexes",
+        "http": 201,
+        "expect": 201,
+        "body": {
+          "name": "bad_unique",
+          "relation": "spectra",
+          "column": "amplitude",
+          "unique": false,
+          "created": 4
+        }
+      },
+      {
+        "step": "重复名称再建：400",
+        "request": "POST /indexes",
+        "http": 400,
+        "expect": 400,
+        "body": {
+          "error": {
+            "code": "invalid",
+            "message": "index already exists"
+          }
+        }
+      },
+      {
+        "step": "引用不存在的列：400",
+        "request": "POST /indexes",
+        "http": 400,
+        "expect": 400,
+        "body": {
+          "error": {
+            "code": "invalid",
+            "message": "unknown index column"
+          }
+        }
+      },
+      {
+        "step": "重复关系名 spectra：409",
+        "request": "POST /relations",
+        "http": 409,
+        "expect": 409,
+        "body": {
+          "error": {
+            "code": "conflict",
+            "message": "relation exists"
+          }
+        }
+      }
+    ]
+  }
+]
